@@ -12,6 +12,11 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
+const (
+	// Generated with `dagger call -m ./dev pin`
+	baseImage = `docker.io/clickhouse/clickhouse-server@sha256:2935c2d30c49117a979a1bacd513423d0c339c933cfdfd8a7a99c23af6a7cdf3`
+)
+
 type Clickhouse struct {
 	Host     string
 	Port     int
@@ -47,7 +52,7 @@ func New(
 func (m *Clickhouse) Container() *Container {
 	return dag.
 		Container().
-		From("index.docker.io/clickhouse/clickhouse-server").
+		From(baseImage).
 		WithNewFile("/root/.bash_history", ContainerWithNewFileOpts{Contents: m.ShellCommand + "\n"}).
 		WithDefaultTerminalCmd([]string{"su", "-"})
 }
