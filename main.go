@@ -17,6 +17,7 @@ const (
 	baseImage = `docker.io/clickhouse/clickhouse-server@sha256:2935c2d30c49117a979a1bacd513423d0c339c933cfdfd8a7a99c23af6a7cdf3`
 )
 
+// A clickhouse client configuration
 type Clickhouse struct {
 	Host     string
 	Port     int
@@ -30,8 +31,12 @@ func New(
 	ctx context.Context,
 	// Clickhouse hostname
 	host string,
+	// Clickhouse port
+	// +default=9000
 	port int,
+	// Clickhouse user
 	user string,
+	// Clickhouse password
 	password *Secret,
 ) (*Clickhouse, error) {
 	m := &Clickhouse{
@@ -57,6 +62,7 @@ func (m *Clickhouse) Container() *Container {
 		WithDefaultTerminalCmd([]string{"su", "-"})
 }
 
+// Like Sprintg, but all arguments are quoted for bash
 func squotef(s string, args ...string) (string, error) {
 	quoted := make([]interface{}, len(args))
 	for i := range args {
@@ -69,6 +75,8 @@ func squotef(s string, args ...string) (string, error) {
 	return fmt.Sprintf(s, quoted...), nil
 }
 
+// The clickhouse client command, fully configured, bash-ready
+// WARNING: this includes the cleartext of the clickhouse password
 func (m *Clickhouse) shellCommand(ctx context.Context) (string, error) {
 	// Password value has to be passed in arguments,
 	//  so we wrap the command in a shell script to avoid leaks
@@ -85,12 +93,16 @@ func (m *Clickhouse) shellCommand(ctx context.Context) (string, error) {
 	)
 }
 
-func (m *Clickhouse) CSV(q string) *File {
+// Send a SQL query, and return the result as a CSV file
+func (m *Clickhouse) CSV(
+	// The SQL query
+	query string,
+) *File {
 	return m.
 		Container().
 		WithExec([]string{"sh", "-c", m.ShellCommand},
 			ContainerWithExecOpts{
-				Stdin:          q,
+				Stdin:          query,
 				RedirectStdout: "out.csv",
 			}).
 		File("out.csv")
